@@ -1,0 +1,140 @@
+# HOW TO RUN TransMsg Locally
+# ============================================================
+# Follow these steps exactly — takes about 10 minutes total
+# ============================================================
+
+## STEP 1 — Install Prerequisites (one time only)
+# Make sure you have these installed:
+# - Node.js 18+  → https://nodejs.org (download LTS)
+# - Python 3.11+ → https://python.org/downloads
+# - Git           → https://git-scm.com
+
+# Check versions in PowerShell:
+node --version     # should say v18 or higher
+python --version   # should say 3.11 or higher
+
+
+## STEP 2 — Set Up Supabase (free, takes 3 minutes)
+
+# 1. Go to https://supabase.com and create a free account
+# 2. Click "New Project" — choose any name e.g. "transmsg"
+# 3. Set a database password (save it somewhere)
+# 4. Wait ~2 minutes for project to launch
+# 5. Go to SQL Editor (left sidebar)
+# 6. Click "New Query"
+# 7. Copy the ENTIRE contents of: supabase/schema.sql
+# 8. Paste it and click "Run"
+# 9. Go to Settings → API
+# 10. Copy:
+#     - Project URL  (looks like: https://abcdefgh.supabase.co)
+#     - anon/public key (long string starting with eyJ...)
+#     - service_role key (another long string — keep secret!)
+
+
+## STEP 3 — Configure Environment Variables
+
+# In your transmsg folder, copy .env.example to .env:
+copy .env.example .env
+
+# Open .env in Notepad and fill in:
+# SUPABASE_URL=https://your-project.supabase.co
+# SUPABASE_SERVICE_KEY=your-service-role-key
+# VITE_SUPABASE_URL=https://your-project.supabase.co
+# VITE_SUPABASE_ANON_KEY=your-anon-key
+
+# Leave WhatsApp/Twilio/Telegram blank for now — system runs in Test Mode
+
+
+## STEP 4 — Start the Backend (Terminal 1)
+
+# Open PowerShell, navigate to your project:
+cd C:\Users\HP\Downloads\transmsg2\backend
+
+# Create a virtual environment (one time only):
+python -m venv venv
+
+# Activate it:
+.\venv\Scripts\activate
+
+# Install dependencies (one time only):
+pip install -r requirements.txt
+
+# Start the server:
+uvicorn main:app --reload --port 8000
+
+# You should see: "Uvicorn running on http://127.0.0.1:8000"
+# API docs available at: http://localhost:8000/docs
+
+
+## STEP 5 — Start the Frontend (Terminal 2)
+
+# Open a SECOND PowerShell window:
+cd C:\Users\HP\Downloads\transmsg2\frontend
+
+# Install dependencies (one time only):
+npm install
+
+# Start the dev server:
+npm run dev
+
+# You should see: "Local: http://localhost:5173/"
+# Open http://localhost:5173 in your browser
+
+
+## STEP 6 — Use the App
+
+# The app opens at http://localhost:5173
+# Start here:
+# 1. Go to "Accounts" → Add Account (starts in Test Mode — no keys needed)
+# 2. Go to "Upload Numbers" → Upload a CSV or paste phone numbers
+# 3. Go to "Campaigns" → New Campaign
+# 4. Select your recipient list → Launch
+# 5. Watch live progress per account in the Campaign Detail page
+
+
+## ADDING REAL API KEYS (when ready)
+
+# Go to Settings page in the app — each section has:
+# - Exact instructions on where to get the key
+# - The .env variable name to update
+# After updating .env, restart the backend (Ctrl+C then uvicorn again)
+# Toggle "Test Mode" OFF on each account in the Accounts page
+
+
+## DEPLOYING TO NETLIFY (frontend only)
+
+# Build the frontend:
+cd frontend
+npm run build
+# This creates a "dist" folder
+
+# Go to netlify.com → Add new site → Deploy manually
+# Drag and drop the "dist" folder
+# Done — you get a live URL instantly
+
+# For the backend, use Railway.app:
+# 1. Go to railway.app → New Project → Deploy from GitHub
+# 2. Select your repo → set Root Directory to "backend"
+# 3. Add all .env variables in Railway dashboard
+# 4. Update VITE_API_URL in frontend to your Railway URL
+
+
+## TROUBLESHOOTING
+
+# "Cannot find module" errors:
+#   → Make sure you ran: pip install -r requirements.txt
+#   → Make sure venv is activated (you see (venv) in terminal)
+
+# "ENOENT package.json" error:
+#   → You're not in the frontend folder. Run: cd frontend first
+
+# White screen in browser:
+#   → Use http://localhost:5173 NOT the file path
+#   → Make sure npm run dev is running
+
+# Backend 500 errors:
+#   → Check your .env has correct Supabase URL and service key
+#   → Make sure you ran the schema.sql in Supabase SQL Editor
+
+# "No active accounts" error when launching campaign:
+#   → Go to Accounts page and add at least one account first

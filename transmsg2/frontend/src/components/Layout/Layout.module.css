@@ -1,0 +1,29 @@
+.shell { display:flex; height:100vh; overflow:hidden; }
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:99; }
+.sidebar {
+  width:220px; flex-shrink:0; background:var(--bg-sidebar);
+  border-right:0.5px solid var(--border); display:flex; flex-direction:column;
+  position:fixed; top:0; left:0; height:100vh; z-index:100;
+  transform:translateX(-100%); transition:transform 0.22s cubic-bezier(.4,0,.2,1);
+}
+.open { transform:translateX(0); }
+.logo { display:flex; align-items:center; gap:10px; padding:14px 12px; border-bottom:0.5px solid var(--border); }
+.logoIcon { width:30px; height:30px; background:var(--green); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:16px; flex-shrink:0; }
+.logoName { font-size:14px; font-weight:600; color:var(--text-1); }
+.logoSub  { font-size:10px; color:var(--text-3); margin-top:1px; }
+.closeBtn { margin-left:auto; background:none; border:none; color:var(--text-2); font-size:16px; cursor:pointer; padding:4px; border-radius:6px; }
+.closeBtn:hover { background:rgba(255,255,255,0.06); }
+.nav { flex:1; padding:8px 6px; overflow-y:auto; }
+.navItem { display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:8px; font-size:13px; color:var(--text-2); text-decoration:none; transition:background 0.12s,color 0.12s; margin:1px 0; }
+.navItem:hover { background:rgba(255,255,255,0.05); color:var(--text-1); text-decoration:none; }
+.navItem.active { background:rgba(0,168,132,0.15); color:var(--green); font-weight:500; }
+.navItem i { font-size:17px; flex-shrink:0; }
+.footer { padding:10px 12px; border-top:0.5px solid var(--border); }
+.testBadge { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--amber); background:rgba(255,210,121,0.1); padding:6px 10px; border-radius:8px; }
+.testBadge i { font-size:14px; }
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; width:100%; }
+.topbar { height:52px; background:var(--bg-sidebar); border-bottom:0.5px solid var(--border); display:flex; align-items:center; padding:0 16px; gap:12px; flex-shrink:0; }
+.burger { width:34px; height:34px; border:0.5px solid rgba(255,255,255,0.1); background:none; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px; color:var(--text-1); transition:background 0.12s; }
+.burger:hover { background:rgba(255,255,255,0.06); }
+.topTitle { font-size:15px; font-weight:600; color:var(--text-1); flex:1; }
+.content { flex:1; overflow-y:auto; padding:22px 24px; }

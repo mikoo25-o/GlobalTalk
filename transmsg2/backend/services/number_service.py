@@ -1,92 +1,253 @@
 import phonenumbers
 import pandas as pd
 import io
-from typing import List, Dict, Tuple
+import re
 import math
+import logging
+
+from typing import List, Dict, Tuple
+from phonenumbers.phonenumberutil import NumberParseException
+
+logger = logging.getLogger(__name__)
+
+MAX_ROWS = 500000
+
+PHONE_COLUMN_KEYWORDS = [
+    "phone",
+    "mobile",
+    "number",
+    "tel",
+    "cell",
+    "whatsapp",
+    "contact",
+]
 
 
-def validate_phone(number: str) -> Tuple[bool, str]:
+# ─────────────────────────────────────────────────────────────
+# PHONE VALIDATION
+# ─────────────────────────────────────────────────────────────
+
+def validate_phone(
+    number: str,
+    default_region: str = None
+) -> Tuple[bool, str]:
     """
     Validate and normalize a phone number.
-    Returns (is_valid, normalized_number)
+
+    Returns:
+        (is_valid, normalized_number)
     """
-    raw = number.strip().replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+
+    if not number:
+        return False, ""
+
+    raw = str(number).strip()
+
+    # Remove spaces/symbols
+    raw = re.sub(r"[^\d+]", "", raw)
+
     if not raw:
-        return False, raw
-    # Add + if missing
-    if not raw.startswith("+"):
-        raw = "+" + raw
+        return False, ""
+
     try:
-        parsed = phonenumbers.parse(raw, None)
-        if phonenumbers.is_valid_number(parsed):
-            normalized = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
-            return True, normalized
-        return False, raw
-    except Exception:
+
+        # Add + if missing
+        if not raw.startswith("+"):
+            raw = "+" + raw
+
+        parsed = phonenumbers.parse(
+            raw,
+            default_region
+        )
+
+        if not phonenumbers.is_valid_number(parsed):
+            return False, raw
+
+        normalized = phonenumbers.format_number(
+            parsed,
+            phonenumbers.PhoneNumberFormat.E164
+        )
+
+        return True, normalized
+
+    except NumberParseException:
         return False, raw
 
+    except Exception as e:
+        logger.error(f"Phone validation error: {e}")
+        return False, raw
+
+
+# ─────────────────────────────────────────────────────────────
+# TEXT PARSING
+# ─────────────────────────────────────────────────────────────
 
 def parse_numbers_from_text(text: str) -> List[str]:
-    """Parse phone numbers from pasted text (one per line, comma, or semicolon separated)."""
-    import re
-    # Split on newlines, commas, semicolons, pipes
-    raw = re.split(r'[\n,;\|\s]+', text)
-    return [r.strip() for r in raw if r.strip()]
+    """
+    Parse numbers from pasted text.
+    Supports:
+    - newline
+    - comma
+    - semicolon
+    - spaces
+    - pipes
+    """
+
+    if not text:
+        return []
+
+    raw = re.split(r'[\n,;\|\t]+', text)
+
+    cleaned = []
+
+    for item in raw:
+
+        value = item.strip()
+
+        if not value:
+            continue
+
+        cleaned.append(value)
+
+    return cleaned
 
 
-def parse_numbers_from_csv(file_bytes: bytes, filename: str) -> List[str]:
+# ─────────────────────────────────────────────────────────────
+# CSV / EXCEL PARSING
+# ─────────────────────────────────────────────────────────────
+
+def parse_numbers_from_csv(
+    file_bytes: bytes,
+    filename: str
+) -> List[str]:
     """
-    Parse phone numbers from CSV or Excel file.
-    Auto-detects the column containing phone numbers.
+    Parse numbers from CSV or Excel.
+
+    Auto-detects phone column.
     """
+
     try:
-        if filename.endswith(".xlsx") or filename.endswith(".xls"):
-            df = pd.read_excel(io.BytesIO(file_bytes))
+
+        # Excel
+        if filename.endswith((".xlsx", ".xls")):
+
+            df = pd.read_excel(
+                io.BytesIO(file_bytes),
+                dtype=str
+            )
+
+        # CSV
         else:
-            # Try different encodings
+
+            df = None
+
             for enc in ["utf-8", "latin-1", "cp1252"]:
+
                 try:
-                    df = pd.read_csv(io.BytesIO(file_bytes), encoding=enc)
+
+                    df = pd.read_csv(
+                        io.BytesIO(file_bytes),
+                        encoding=enc,
+                        dtype=str
+                    )
+
                     break
+
                 except Exception:
                     continue
 
-        # Find phone column automatically
+            if df is None:
+                raise ValueError(
+                    "Could not decode CSV file"
+                )
+
+        if df.empty:
+            raise ValueError("Uploaded file is empty")
+
+        if len(df) > MAX_ROWS:
+            raise ValueError(
+                f"File exceeds maximum limit of {MAX_ROWS:,} rows"
+            )
+
+        # Clean column names
+        df.columns = [
+            str(c).strip().lower()
+            for c in df.columns
+        ]
+
+        # Find phone column
         phone_col = None
-        phone_keywords = ["phone", "mobile", "number", "tel", "cell", "whatsapp", "contact"]
+
         for col in df.columns:
-            if any(kw in col.lower() for kw in phone_keywords):
+
+            if any(
+                kw in col
+                for kw in PHONE_COLUMN_KEYWORDS
+            ):
                 phone_col = col
                 break
-        # Fallback: use first column
+
+        # Fallback → first column
         if phone_col is None:
             phone_col = df.columns[0]
 
-        numbers = df[phone_col].dropna().astype(str).tolist()
-        return [n.strip() for n in numbers if n.strip()]
+        # Remove empty rows
+        df = df[df[phone_col].notna()]
+
+        numbers = (
+            df[phone_col]
+            .astype(str)
+            .str.strip()
+            .tolist()
+        )
+
+        numbers = [
+            n for n in numbers
+            if n and n.lower() != "nan"
+        ]
+
+        return numbers
+
+    except ValueError:
+        raise
+
     except Exception as e:
+        logger.error(f"CSV parse error: {e}")
         raise ValueError(f"Could not parse file: {e}")
 
 
-def process_numbers(raw_numbers: List[str]) -> Dict:
+# ─────────────────────────────────────────────────────────────
+# NUMBER PROCESSING
+# ─────────────────────────────────────────────────────────────
+
+def process_numbers(
+    raw_numbers: List[str]
+) -> Dict:
     """
-    Validate, deduplicate, and normalize a list of phone numbers.
-    Returns summary with valid/invalid/duplicate counts.
+    Validate, normalize, and deduplicate numbers.
     """
+
     seen = set()
+
     valid = []
     invalid = []
+
     duplicates = 0
 
     for raw in raw_numbers:
+
         is_valid, normalized = validate_phone(raw)
+
         if not is_valid:
             invalid.append(raw)
             continue
+
         if normalized in seen:
             duplicates += 1
             continue
+
         seen.add(normalized)
+
         valid.append(normalized)
 
     return {
@@ -99,35 +260,50 @@ def process_numbers(raw_numbers: List[str]) -> Dict:
     }
 
 
-def split_numbers_across_accounts(numbers: List[str], accounts: List[Dict], group_size: int = 2000) -> List[Dict]:
-    """
-    Auto-split numbers across accounts.
+# ─────────────────────────────────────────────────────────────
+# ACCOUNT SPLITTING
+# ─────────────────────────────────────────────────────────────
 
-    Rules:
-    - Default group size: 2,000 per account
-    - If more numbers than accounts * group_size: distribute evenly
-    - Returns list of assignments: {account_id, numbers, from_idx, to_idx}
-
-    Example: 10,000 numbers, 5 accounts → 2,000 each
-    Example: 10,000 numbers, 3 accounts → 3334, 3333, 3333
+def split_numbers_across_accounts(
+    numbers: List[str],
+    accounts: List[Dict],
+    group_size: int = 2000
+) -> List[Dict]:
     """
+    Auto split recipients across accounts.
+    """
+
     if not accounts:
-        raise ValueError("No active accounts available for sending")
+        raise ValueError(
+            "No active accounts available"
+        )
+
     if not numbers:
-        raise ValueError("No valid numbers to send to")
+        raise ValueError(
+            "No valid numbers to send"
+        )
 
-    n_accounts = len(accounts)
     total = len(numbers)
+    n_accounts = len(accounts)
 
-    # Calculate how many numbers per account
-    per_account = math.ceil(total / n_accounts)
+    # Even distribution
+    per_account = math.ceil(
+        total / n_accounts
+    )
 
     assignments = []
+
     idx = 0
 
-    for i, account in enumerate(accounts):
+    for account in accounts:
+
         start = idx
-        end = min(idx + per_account, total)
+
+        end = min(
+            idx + per_account,
+            total
+        )
+
         chunk = numbers[start:end]
 
         if not chunk:
@@ -141,16 +317,39 @@ def split_numbers_across_accounts(numbers: List[str], accounts: List[Dict], grou
             "to_idx": end,
             "count": len(chunk),
         })
+
         idx = end
+
         if idx >= total:
             break
 
     return assignments
 
 
-def format_message(template: str, variables: Dict) -> str:
-    """Replace {{variable}} placeholders in message template."""
+# ─────────────────────────────────────────────────────────────
+# TEMPLATE VARIABLES
+# ─────────────────────────────────────────────────────────────
+
+def format_message(
+    template: str,
+    variables: Dict
+) -> str:
+    """
+    Replace {{variable}} placeholders.
+    """
+
+    if not template:
+        return ""
+
     result = template
+
     for key, value in variables.items():
-        result = result.replace("{{" + key + "}}", str(value))
+
+        placeholder = "{{" + str(key) + "}}"
+
+        result = result.replace(
+            placeholder,
+            str(value)
+        )
+
     return result

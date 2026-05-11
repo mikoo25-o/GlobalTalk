@@ -1,52 +1,103 @@
-import React, { useState } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import s from './Layout.module.css'
-
-const NAV = [
-  { to:'/dashboard',    icon:'ti-layout-dashboard', label:'Dashboard' },
-  { to:'/upload',       icon:'ti-upload',            label:'Upload Numbers' },
-  { to:'/accounts',     icon:'ti-device-mobile',     label:'Accounts' },
-  { to:'/campaigns',    icon:'ti-speakerphone',       label:'Campaigns' },
-  { to:'/settings',     icon:'ti-settings',           label:'Settings' },
-]
+import React from 'react'
+import { NavLink, Outlet } from 'react-router-dom'
 
 export default function Layout() {
-  const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
+  const menuItems = [
+    {
+      label: 'Dashboard',
+      path: '/',
+      icon: 'ti ti-layout-dashboard',
+    },
+    {
+      label: 'Campaigns',
+      path: '/campaigns',
+      icon: 'ti ti-send',
+    },
+    {
+      label: 'Accounts',
+      path: '/accounts',
+      icon: 'ti ti-device-mobile',
+    },
+    {
+      label: 'Upload',
+      path: '/upload',
+      icon: 'ti ti-upload',
+    },
+    {
+      label: 'Settings',
+      path: '/settings',
+      icon: 'ti ti-settings',
+    },
+  ]
+
   return (
-    <div className={s.shell}>
-      {open && <div className={s.overlay} onClick={() => setOpen(false)} />}
-      <aside className={`${s.sidebar} ${open ? s.open : ''}`}>
-        <div className={s.logo}>
-          <div className={s.logoIcon}><i className="ti ti-world" /></div>
-          <div>
-            <div className={s.logoName}>TransMsg</div>
-            <div className={s.logoSub}>Bulk Messaging Platform</div>
+    <div className="app-shell">
+
+      <aside className="sidebar">
+
+        <div className="sidebar-top">
+          <div className="brand-logo">
+            T
           </div>
-          <button className={s.closeBtn} onClick={() => setOpen(false)}><i className="ti ti-x" /></button>
+
+          <div>
+            <div className="brand-name">
+              TransMsg
+            </div>
+
+            <div className="brand-sub">
+              Messaging Platform
+            </div>
+          </div>
         </div>
-        <nav className={s.nav}>
-          {NAV.map(n => (
-            <NavLink key={n.to} to={n.to} onClick={() => setOpen(false)}
-              className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`}>
-              <i className={`ti ${n.icon}`} /><span>{n.label}</span>
+
+        <div className="sidebar-section-title">
+          MAIN MENU
+        </div>
+
+        <nav className="sidebar-nav">
+          {menuItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              className={({ isActive }) =>
+                isActive
+                  ? 'sidebar-link active'
+                  : 'sidebar-link'
+              }
+            >
+              <i className={item.icon}></i>
+
+              <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>
-        <div className={s.footer}>
-          <div className={s.testBadge}><i className="ti ti-test-pipe" /> Test Mode Active</div>
+
+        <div className="sidebar-bottom">
+
+          <div className="sidebar-status">
+            <div className="status-dot"></div>
+
+            <div>
+              <div className="status-title">
+                System Online
+              </div>
+
+              <div className="status-sub">
+                All services operational
+              </div>
+            </div>
+          </div>
+
         </div>
+
       </aside>
-      <div className={s.main}>
-        <div className={s.topbar}>
-          <button className={s.burger} onClick={() => setOpen(true)}><i className="ti ti-menu-2" /></button>
-          <span className={s.topTitle}>TransMsg</span>
-          <button className="btn btn-primary" onClick={() => navigate('/campaigns/new')}>
-            <i className="ti ti-plus" /> New Campaign
-          </button>
-        </div>
-        <div className={s.content}><Outlet /></div>
-      </div>
+
+      <main className="main-content">
+        <Outlet />
+      </main>
+
     </div>
   )
 }

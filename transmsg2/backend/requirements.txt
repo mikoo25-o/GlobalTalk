@@ -11,4 +11,3 @@ phonenumbers==8.13.31
 python-multipart==0.0.9
 twilio==8.13.0
 requests==2.31.0
-asyncio==3.4.3
